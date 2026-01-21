@@ -1,0 +1,15 @@
+streamlit
+requests
+python-dotenv
+openai
+edge-tts
+scipy
+numpy
+pydub
+aliyun-python-sdk-core
+dashscope
+nltk
+pyphen
+eng-to-ipa
+SpeechRecognition
+dtw-python

@@ -1,0 +1,17 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# App output
+output/
+*.mp3
+*.wav
+
+# IDE
+.vscode/
+.idea/
