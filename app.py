@@ -41,10 +41,10 @@ load_dotenv()
 if hasattr(st, "secrets"):
     for key, value in st.secrets.items():
         # Only inject if not already set (preserve local .env preference or override? usually secrets override)
-        # But st.secrets are usually flat for simple keys. 
-        # Let's handle specific known keys to avoid polluting env with nested dicts if secrets.toml is complex.
         if key in ["DASHSCOPE_API_KEY", "ALIYUN_APP_KEY", "ALIYUN_AK_ID", "ALIYUN_AK_SECRET"]:
-             os.environ[key] = value
+             # Ensure value is string and strip whitespace/quotes just in case
+             if isinstance(value, str):
+                 os.environ[key] = value.strip().strip('"').strip("'")
 
 # Set page config
 st.set_page_config(page_title="英语个性化跟读工具 Ver 0.1", layout="wide", initial_sidebar_state="expanded")
@@ -88,6 +88,9 @@ def save_to_library(item):
     lib.append(item)
     with open(LIBRARY_FILE, "w", encoding='utf-8') as f:
         json.dump(lib, f, indent=2, ensure_ascii=False)
+
+# Set page config (Moved to top)
+# st.set_page_config(page_title="英语个性化跟读工具 Ver 0.1", layout="wide", initial_sidebar_state="expanded")
 
 # Custom CSS - UI/UX Pro Max
 st.markdown("""
@@ -213,6 +216,7 @@ st.markdown("""
         border-color: #3B82F6;
         box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
     }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -227,7 +231,23 @@ with st.sidebar:
     st.markdown("---")
 
     # API Key Handling (Hidden from UI)
-    api_key = os.getenv("DASHSCOPE_API_KEY")
+    # Priority: st.secrets > os.getenv
+    api_key = None
+    if hasattr(st, "secrets") and "DASHSCOPE_API_KEY" in st.secrets:
+        api_key = st.secrets["DASHSCOPE_API_KEY"]
+    
+    if not api_key:
+        api_key = os.getenv("DASHSCOPE_API_KEY")
+
+    # Clean the key if found
+    if api_key:
+        api_key = api_key.strip().strip('"').strip("'")
+    
+    # Debug: Show key status
+    if api_key:
+        st.success(f"✅ API Key Loaded (Ends with ...{api_key[-4:] if len(api_key)>4 else '****'})")
+    else:
+        st.error("❌ API Key Not Found")
     
     with st.expander("🛠️ 评测设置 (Evaluation Settings)", expanded=False):
         st.caption("默认使用本地引擎 (Local)。如需高级评测 (Aliyun)，请配置以下信息。")
@@ -372,7 +392,7 @@ if st.session_state.generated_text:
     with st.container():
         col_title, col_save = st.columns([3, 1])
         with col_title:
-             st.markdown(f"## {data['title']}")
+            st.markdown(f"## {data['title']}")
         with col_save:
              current_tags = data.get('tags', [])
              new_tags = st.multiselect("🏷️ 标签 (Tags)", 
