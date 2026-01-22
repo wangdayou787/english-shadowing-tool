@@ -38,13 +38,19 @@ load_dotenv()
 # Streamlit Cloud Secrets Integration
 # If running on Streamlit Cloud, secrets are in st.secrets.
 # We inject them into os.environ so downstream modules (using os.getenv) work transparently.
-if hasattr(st, "secrets"):
-    for key, value in st.secrets.items():
-        # Only inject if not already set (preserve local .env preference or override? usually secrets override)
-        if key in ["DASHSCOPE_API_KEY", "ALIYUN_APP_KEY", "ALIYUN_AK_ID", "ALIYUN_AK_SECRET"]:
-             # Ensure value is string and strip whitespace/quotes just in case
-             if isinstance(value, str):
-                 os.environ[key] = value.strip().strip('"').strip("'")
+try:
+    if hasattr(st, "secrets"):
+        # Accessing st.secrets might trigger FileNotFoundError if no secrets.toml exists locally
+        # So we convert to dict inside the try block
+        secrets_dict = dict(st.secrets)
+        for key, value in secrets_dict.items():
+            if key in ["DASHSCOPE_API_KEY", "ALIYUN_APP_KEY", "ALIYUN_AK_ID", "ALIYUN_AK_SECRET"]:
+                 # Ensure value is string and strip whitespace/quotes just in case
+                 if isinstance(value, str):
+                     os.environ[key] = value.strip().strip('"').strip("'")
+except Exception:
+    # If secrets are not found (local run without secrets.toml), just ignore
+    pass
 
 # Set page config
 st.set_page_config(page_title="英语个性化跟读工具 Ver 0.1", layout="wide", initial_sidebar_state="expanded")
@@ -233,8 +239,11 @@ with st.sidebar:
     # API Key Handling (Hidden from UI)
     # Priority: st.secrets > os.getenv
     api_key = None
-    if hasattr(st, "secrets") and "DASHSCOPE_API_KEY" in st.secrets:
-        api_key = st.secrets["DASHSCOPE_API_KEY"]
+    try:
+        if hasattr(st, "secrets") and "DASHSCOPE_API_KEY" in st.secrets:
+            api_key = st.secrets["DASHSCOPE_API_KEY"]
+    except Exception:
+        pass
     
     if not api_key:
         api_key = os.getenv("DASHSCOPE_API_KEY")
@@ -245,7 +254,9 @@ with st.sidebar:
     
     # Debug: Show key status
     if api_key:
-        st.success(f"✅ API Key Loaded (Ends with ...{api_key[-4:] if len(api_key)>4 else '****'})")
+        prefix = api_key[:4] if len(api_key) > 4 else "****"
+        suffix = api_key[-4:] if len(api_key) > 4 else "****"
+        st.success(f"✅ API Key Loaded ({prefix}...{suffix})")
     else:
         st.error("❌ API Key Not Found")
     
