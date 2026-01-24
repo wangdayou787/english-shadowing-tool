@@ -488,7 +488,7 @@ if st.session_state.generated_text:
         with col1:
             speed = st.select_slider(
                 "语速 (Speed)", 
-                options=[0.85, 1.0, 1.15], 
+                options=[0.75, 0.9, 1.0, 1.15], 
                 value=1.0,
                 format_func=lambda x: "正常 (Normal)" if x == 1.0 else str(x)
             )
